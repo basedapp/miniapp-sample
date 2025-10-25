@@ -9,18 +9,32 @@ function TradingBot() {
 
   const [size, setSize] = useState(0.001);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handlePlaceOrder = useCallback(async () => {
     setLoading(true);
-    const result = await placeOrder?.({
-      symbol: currentSymbol,
-      side: "buy",
-      orderType: "market",
-      size: size,
-    });
-    setResult(result);
-    setLoading(false);
+    try {
+      const result = await placeOrder?.({
+        symbol: currentSymbol,
+        side: "buy",
+        orderType: "market",
+        size: size,
+      });
+
+      console.log("miniapp order result", result);
+      if (result && result.success) {
+        setResult(JSON.stringify(result.data));
+      } else {
+        setError(result?.error ?? "Unknown error");
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error("miniapp order error", error);
+      setError(error instanceof Error ? error.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
   }, [placeOrder, currentSymbol, size]);
 
   if (!connected) {
@@ -59,6 +73,7 @@ function TradingBot() {
         {loading ? "Placing Order..." : "Place Order"}
       </button>
       {result && <p>Result: {JSON.stringify(result)}</p>}
+      {error && <p>Error: {error}</p>}
     </div>
   );
 }
@@ -70,7 +85,7 @@ function App() {
         appId: "sample-app",
         autoConnect: true,
         name: "Sample App",
-        permissions: ["read_account"],
+        permissions: ["read_account", "place_orders"],
         url: typeof window !== "undefined" ? window.location.origin : "",
         debug: true,
       }}
